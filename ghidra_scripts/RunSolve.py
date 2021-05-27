@@ -36,19 +36,19 @@ def run_script(server_host, server_port):
         
         addrGoodFunc = getFuncAddress('win')
         addrBadFunc = getFuncAddress('lose')
+        startAddress = getFuncAddress('start')
         
-        argv = [filename]
-        argv.append(claripy.BVS('sym_arg',8*32))
+        bv = claripy.BVS('sym_arg',8*32)
         
-        initial_state = project.factory.entry_state(args=argv, add_options={angr.options.LAZY_SOLVES,
+        call_state = project.factory.call_state(startAddress, bv, add_options={angr.options.LAZY_SOLVES,
                                               angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS})
         
-        simulation = project.factory.simgr(initial_state)
+        simulation = project.factory.simgr(call_state)
         simulation.explore(find=is_successful, avoid=(addrBadFunc,))
         
         if len(simulation.found) > 0:
             for solution_state in simulation.found:
-                print("[>>] {!r}".format(solution_state.solver.eval(argv[1], cast_to=bytes).split(b"\0")[0]))
+                print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
         else:
             print("[>>>] no solution found :(") 
 
