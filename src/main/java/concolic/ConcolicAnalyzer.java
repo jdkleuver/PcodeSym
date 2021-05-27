@@ -15,71 +15,32 @@
  */
 package concolic;
 
+import java.io.PrintWriter;
 import java.util.List;
 
 import javax.swing.JOptionPane;
 
-import ghidra.app.services.AbstractAnalyzer;
-import ghidra.app.services.AnalyzerType;
-import ghidra.app.util.importer.MessageLog;
-import ghidra.framework.options.Options;
+import generic.jar.ResourceFile;
+import ghidra.app.script.GhidraScript;
+import ghidra.app.script.GhidraScriptProvider;
+import ghidra.app.script.GhidraScriptUtil;
+import ghidra.app.services.ConsoleService;
+import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.address.Address;
-import ghidra.program.model.address.AddressSetView;
-import ghidra.program.model.listing.Program;
-import ghidra.util.exception.CancelledException;
-import ghidra.util.task.TaskMonitor;
 
 /**
  * TODO: Provide class-level documentation that describes what this analyzer does.
  */
-public class ConcolicAnalyzer extends AbstractAnalyzer {
+public class ConcolicAnalyzer {
 
     static List<Address> avoidAddresses;
     static List<Address> sinks;
     static Address currentSinkAddress = null;
-    static final String scriptName = "RunAngr.py";
+    static final String scriptName = "python_basics.py";
+    private PluginTool tool;
 	
-	public ConcolicAnalyzer() {
-
-		// TODO: Name the analyzer and give it a description.
-
-		super("My Analyzer", "Analyzer description goes here", AnalyzerType.BYTE_ANALYZER);
-	}
-
-	@Override
-	public boolean getDefaultEnablement(Program program) {
-
-		// TODO: Return true if analyzer should be enabled by default
-
-		return false;
-	}
-
-	@Override
-	public boolean canAnalyze(Program program) {
-
-		// TODO: Examine 'program' to determine of this analyzer should analyze it.  Return true
-		// if it can.
-
-		return false;
-	}
-
-	@Override
-	public void registerOptions(Options options, Program program) {
-
-		// TODO: If this analyzer has custom options, register them here
-
-		options.registerOption("Option name goes here", false, null,
-			"Option description goes here");
-	}
-
-	@Override
-	public boolean added(Program program, AddressSetView set, TaskMonitor monitor, MessageLog log)
-			throws CancelledException {
-
-		// TODO: Perform analysis when things get added to the 'program'.  Return true if the
-		// analysis succeeded.
-
-		return false;
+	public ConcolicAnalyzer(PluginTool tool) {
+		this.tool = tool;
 	}
 	
 	public void setSink(Address address) {
@@ -105,8 +66,44 @@ public class ConcolicAnalyzer extends AbstractAnalyzer {
         return false;
 	}
 	
-	public boolean solve() {
-		return false;
+	public void solve() {
+		JOptionPane.showMessageDialog(null, GhidraScriptUtil.getProviders().toString(), "script source directories", JOptionPane.INFORMATION_MESSAGE);
+		ResourceFile sourceFile = GhidraScriptUtil.findScriptByName(scriptName);
+		if(sourceFile == null) {
+			JOptionPane.showMessageDialog(null, "Couldn't find" + scriptName, "Error", JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+	    GhidraScriptProvider provider = GhidraScriptUtil.getProvider(sourceFile);
+	    if(provider == null) {
+	    	JOptionPane.showMessageDialog(null, "Couldn't find script provider for " + scriptName, "Error", JOptionPane.ERROR_MESSAGE);
+	    	return;
+	    }
+	    PrintWriter writer = getOutputMsgStream(tool);
+	    String[] scriptArguments = {"foo", "bar"};
+	    GhidraScript script = null;
+		try {
+			script = provider.getScriptInstance(sourceFile, writer);
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+	    try {
+			script.runScript(scriptName, scriptArguments);
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+		return;
+	}
+
+	private PrintWriter getOutputMsgStream(PluginTool ptool) {
+		if (ptool != null) {
+			ConsoleService console = ptool.getService(ConsoleService.class);
+			if (console != null) {
+				return console.getStdOut();
+			}
+		}
+		return new PrintWriter(System.out);
 	}
 
 }

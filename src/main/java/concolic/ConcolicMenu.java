@@ -86,8 +86,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction solve = new ListingContextAction("Run angr to solve", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-            	if(!analyzer.solve())
-            		JOptionPane.showMessageDialog(null, "Failed to run solver", "Error", JOptionPane.ERROR_MESSAGE);
+            	analyzer.solve();
             }
         };
         solve.setMenuBarData(new MenuData(new String[] {

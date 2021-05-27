@@ -1,6 +1,9 @@
-# Example script that demonstrates running a python3 (or technically, py2 should work) script outside the Ghidra interpreter, to use networkx to graph a function. Requires networkx installed in the external environment.
-# @author jackdekleuver
-# @category Examples
+#Run angr solver using given parameters
+#@author jackdekleuver
+#@category Concolic
+#@keybinding
+#@menupath Tools.Concolic Execution.Run
+#@toolbar
 
 import argparse
 
@@ -29,7 +32,7 @@ def run_script(server_host, server_port):
         filename = getCurrentProgram().getExecutablePath()
         base_address = getCurrentProgram().getMinAddress().getOffset()
         
-        project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False})
+        project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
         
         addrGoodFunc = getFuncAddress('win')
         addrBadFunc = getFuncAddress('lose')
@@ -80,3 +83,4 @@ if __name__ == "__main__":
 
         run_script(server_host=args.connect_to_host,
                    server_port=args.connect_to_port)
+

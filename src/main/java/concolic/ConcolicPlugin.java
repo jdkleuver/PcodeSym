@@ -35,6 +35,7 @@ import ghidra.framework.plugintool.util.PluginStatus;
 public class ConcolicPlugin extends ProgramPlugin {
 
     ConcolicMenu menu;
+    ConcolicAnalyzer analyzer;
 
 	/**
 	 * Plugin constructor.
@@ -43,7 +44,7 @@ public class ConcolicPlugin extends ProgramPlugin {
 	 */
 	public ConcolicPlugin(PluginTool tool) {
 		super(tool, true, true);
-		ConcolicAnalyzer analyzer = new ConcolicAnalyzer();
+		analyzer = new ConcolicAnalyzer(tool);
         menu = new ConcolicMenu(this, analyzer);
 	}
 
