@@ -13,8 +13,11 @@ def run_script(server_host, server_port):
 
     # load something ghidra doesn't have
     import angr
+    from angr.engines.pcode.lifter import IRSB
     import claripy
     import sys
+    import pypcode
+
 
     print("Running inside the bridge!")
 
@@ -25,32 +28,69 @@ def run_script(server_host, server_port):
                 return True
             return False
         
-        def getFuncAddress(funcName):
+        def get_func_address(funcName):
             return int(getFunction(funcName).getBody().getMinAddress().toString(), 16)
+
+        def get_pcode_at_address(address):
+            return currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(address)).getPcode()
         
+        ############ Setup state ##########
+
         # Get program name from ghidra
         filename = getCurrentProgram().getExecutablePath()
         base_address = getCurrentProgram().getMinAddress().getOffset()
         
         project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
         
-        addrGoodFunc = getFuncAddress('win')
-        addrBadFunc = getFuncAddress('lose')
-        startAddress = getFuncAddress('start')
+        addrGoodFunc = get_func_address('win')
+        addrBadFunc = get_func_address('lose')
+        startAddress = get_func_address('start')
         
         bv = claripy.BVS('sym_arg',8*32)
         
         call_state = project.factory.call_state(startAddress, bv, add_options={angr.options.LAZY_SOLVES,
                                               angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS})
         
-        simulation = project.factory.simgr(call_state)
-        simulation.explore(find=is_successful, avoid=(addrBadFunc,))
         
-        if len(simulation.found) > 0:
-            for solution_state in simulation.found:
-                print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
-        else:
-            print("[>>>] no solution found :(") 
+        simulation = project.factory.simgr(call_state)
+
+        ctx = pypcode.Context(lang=""#get lang somehow#)
+
+        
+        ######### Do symbolic execution ########
+
+        #simulation.explore(find=is_successful, avoid=(addrBadFunc,))
+
+        current_pcode = get_pcode_at_address(hex(startAddress))
+        print((current_pcode[0])
+        pcode_array = []
+        for pcode in current_pcode:
+            pcode_array.append(pypcode.PcodeOp(
+                   ctx=ctx,
+                   seq=pcode.seqnum,
+                   opcode=pcode.opcode,
+                   inputs=pcode.inputs,
+                   output=pcode.output
+                )
+            )
+        translation = pypcode.Translation(
+            ctx=ctx,
+            address=address,
+            length=len(current_pcode),
+            asm_mnem="", # TODO
+            asm_body="", # TODO
+            ops = pcode_array
+        )
+
+        ######## Post run analysis #########
+        
+        print(project.analyses.CFGEmulated())
+        
+        #if len(simulation.found) > 0:
+        #    for solution_state in simulation.found:
+        #        print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
+        #else:
+        print("[>>>] no solution found :(") 
 
 if __name__ == "__main__":
 
