@@ -25,7 +25,7 @@ import ghidra.framework.plugintool.util.PluginStatus;
  */
 //@formatter:off
 @PluginInfo(
-	status = PluginStatus.STABLE,
+	status = PluginStatus.UNSTABLE,
 	packageName = ExamplesPluginPackage.NAME,
 	category = PluginCategoryNames.EXAMPLES,
 	shortDescription = "Plugin short description goes here.",
@@ -44,7 +44,7 @@ public class ConcolicPlugin extends ProgramPlugin {
 	 */
 	public ConcolicPlugin(PluginTool tool) {
 		super(tool, true, true);
-		analyzer = new ConcolicAnalyzer(tool);
+		analyzer = new ConcolicAnalyzer();
         menu = new ConcolicMenu(this, analyzer);
 	}
 
