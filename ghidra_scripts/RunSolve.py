@@ -28,7 +28,28 @@ def run_script(server_host, server_port):
     MAX_BYTES = 5000
 
     # create the bridge and load the flat API/ghidra modules into the namespace
-    with ghidra_bridge.GhidraBridge(connect_to_host=server_host, connect_to_port=server_port, namespace=globals()):
+    with ghidra_bridge.GhidraBridge(connect_to_host=server_host, connect_to_port=server_port, namespace=globals()) as bridge:
+        class MySpace():
+            def __init__(self, name):
+                self.name = name
+
+        class MyVarnode(pypcode.Varnode):
+            def __init__(self, ctx, space, offset, size, ghidra_varnode):
+                super().__init__(ctx, space, offset, size)
+                program = getCurrentProgram()
+                language = program.getLanguage()
+                programContext = bridge.get_ghidra_api().program.util.ProgramContextImpl(language)
+                spaceContext = bridge.get_ghidra_api().program.util.ProgramContextImpl(language)
+                self.vcontext = bridge.get_ghidra_api().program.util.VarnodeContext(program, programContext, spaceContext)
+                self.ghidra_varnode = ghidra_varnode
+
+            def get_register_name(self):
+                return self.vcontext.getRegister(self.ghidra_varnode).getName()
+
+            def get_space_from_const(self):
+                print("space name:", self.ghidra_varnode.getAddress().getAddressSpace().getName())
+                return MySpace("mem") # if the name of the address space is "const" then it expects this to return an addres space with a name of either "ram" or "mem", not sure exactly the consequences of faking this out are
+
         class GhidraPcodeBlockLifter(PcodeBasicBlockLifter):
             def __init__(self, arch):
                 super().__init__(arch)
@@ -60,9 +81,9 @@ def run_script(server_host, server_port):
                 for pcode in pcodes:
                     inputs_varnodes = []
                     for inp in pcode.inputs:
-                        inputs_varnodes.append(pypcode.Varnode(self.context, inp.getAddress().getAddressSpace(), inp.offset, inp.size))
+                        inputs_varnodes.append(MyVarnode(self.context, inp.getAddress().getAddressSpace(), inp.offset, inp.size, inp))
                     if pcode.output is not None:
-                        output_varnode = pypcode.Varnode(self.context, pcode.output.getAddress().getAddressSpace(), pcode.output.offset, pcode.output.size)
+                        output_varnode = MyVarnode(self.context, pcode.output.getAddress().getAddressSpace(), pcode.output.offset, pcode.output.size, pcode.output)
                     else:
                         output_varnode = None
                     pcode_array.append(pypcode.PcodeOp(self.context, pcode.seqnum, pypcode.OpCode(pcode.opcode), inputs_varnodes, output_varnode))
@@ -118,10 +139,6 @@ def run_script(server_host, server_port):
 
                 irsb.next, irsb.jumpkind = next_block
         
-        class MyVarnode(pypcode.Varnode):
-            def get_register_name():
-                
-
         def is_successful(state):
             if(state.ip.args[0] == addrGoodFunc):
                 return True
@@ -162,6 +179,9 @@ def run_script(server_host, server_port):
         current_pcode = get_pcode_at_address(hex(startAddress))
         irsb = IRSB.empty_block(archinfo.ArchAMD64, startAddress, None, None, None, None, None, None)
         block_lifter.lift(irsb, startAddress, current_pcode, 0, None, None)
+
+        print(simulation.
+
         simulation.step(irsb=irsb)
 
 
