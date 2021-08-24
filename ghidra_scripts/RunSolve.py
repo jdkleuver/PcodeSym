@@ -47,7 +47,7 @@ def run_script(server_host, server_port):
                 return self.vcontext.getRegister(self.ghidra_varnode).getName()
 
             def get_space_from_const(self):
-                print("space name:", self.ghidra_varnode.getAddress().getAddressSpace().getName())
+                # self.ghidra_varnode.getAddress().getAddressSpace().getName() returns const, but for some reason that won't work
                 return MySpace("mem") # if the name of the address space is "const" then it expects this to return an addres space with a name of either "ram" or "mem", not sure exactly the consequences of faking this out are
 
         class GhidraPcodeBlockLifter(PcodeBasicBlockLifter):
@@ -149,6 +149,14 @@ def run_script(server_host, server_port):
 
         def get_pcode_at_address(address):
             return currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(address)).getPcode()
+
+        def successor_func(state, **run_args):
+            currentAddress = state.solver.eval(state.ip) # assumption - the instruction pointer is concrete for each state
+            current_pcode = get_pcode_at_address(hex(currentAddress))
+            irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
+            block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
+            return state.project.factory.successors(state, irsb, **run_args)
+
         
         ############ Setup state ##########
 
@@ -175,25 +183,33 @@ def run_script(server_host, server_port):
         ######### Do symbolic execution ########
 
         #simulation.explore(find=is_successful, avoid=(addrBadFunc,))
+        n = 0
+        while not simulation.complete():
+            #currentAddress = state.solver.eval(state.ip) # assumption - the instruction pointer is concrete for each state
+            #current_pcode = get_pcode_at_address(hex(currentAddress))
+            #irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
+            #block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
 
-        current_pcode = get_pcode_at_address(hex(startAddress))
-        irsb = IRSB.empty_block(archinfo.ArchAMD64, startAddress, None, None, None, None, None, None)
-        block_lifter.lift(irsb, startAddress, current_pcode, 0, None, None)
+            simulation.step(successor_func=successor_func)
 
-        print(simulation.
+            print(len(simulation.active))
+            for state in simulation.active:
+                print(hex(state.solver.eval(state.ip)))
 
-        simulation.step(irsb=irsb)
+            n += 1
+            if n == 10:
+                break
 
 
         ######## Post run analysis #########
         
-        print(project.analyses.CFGEmulated())
+        #print(project.analyses.CFGEmulated())
         
         #if len(simulation.found) > 0:
         #    for solution_state in simulation.found:
         #        print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
         #else:
-        print("[>>>] no solution found :(") 
+        #    print("[>>>] no solution found :(") 
 
 if __name__ == "__main__":
 
