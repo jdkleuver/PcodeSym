@@ -151,7 +151,7 @@ def run_script(server_host, server_port):
             return currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(address)).getPcode()
 
         def successor_func(state, **run_args):
-            currentAddress = state.solver.eval(state.ip) # assumption - the instruction pointer is concrete for each state
+            currentAddress = state.ip.args[0]
             current_pcode = get_pcode_at_address(hex(currentAddress))
             irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
             block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
@@ -185,7 +185,7 @@ def run_script(server_host, server_port):
         #simulation.explore(find=is_successful, avoid=(addrBadFunc,))
         n = 0
         while not simulation.complete():
-            #currentAddress = state.solver.eval(state.ip) # assumption - the instruction pointer is concrete for each state
+            #currentAddress = state.ip.args[0]
             #current_pcode = get_pcode_at_address(hex(currentAddress))
             #irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
             #block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
