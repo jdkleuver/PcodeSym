@@ -13,7 +13,7 @@ def run_script(server_host, server_port):
 
     # load something ghidra doesn't have
     import angr
-    from angr.engines.pcode.lifter import IRSB, PcodeBasicBlockLifter
+    from angr.engines.pcode.lifter import IRSB, PcodeBasicBlockLifter, ExitStatement
     import claripy
     import sys
     import pypcode
@@ -33,6 +33,15 @@ def run_script(server_host, server_port):
             def __init__(self, name):
                 self.name = name
 
+        class MyAddress(pypcode.Address):
+            def __init__(self, ctx, space, offset, ghidra_address):
+                super().__init__(ctx, space, offset)
+                self.ghidra_address = ghidra_address
+
+            @property
+            def is_constant(self):
+                return self.ghidra_address.isConstantAddress()
+
         class MyVarnode(pypcode.Varnode):
             def __init__(self, ctx, space, offset, size, ghidra_varnode):
                 super().__init__(ctx, space, offset, size)
@@ -49,6 +58,9 @@ def run_script(server_host, server_port):
             def get_space_from_const(self):
                 # self.ghidra_varnode.getAddress().getAddressSpace().getName() returns const, but for some reason that won't work
                 return MySpace("mem") # if the name of the address space is "const" then it expects this to return an addres space with a name of either "ram" or "mem", not sure exactly the consequences of faking this out are
+
+            def get_addr(self):
+                return MyAddress(self.ctx, self.space, self.offset, self.ghidra_varnode.getAddress())
 
         class GhidraPcodeBlockLifter(PcodeBasicBlockLifter):
             def __init__(self, arch):
@@ -110,12 +122,12 @@ def run_script(server_host, server_port):
                     for op in insn.ops:
                         if (op.opcode in [pypcode.OpCode.BRANCH, pypcode.OpCode.CBRANCH]
                             and op.inputs[0].get_addr().is_constant):
-                                l.warning('Block contains relative p-code jump at '
-                                          'instruction %#x:%d, which is not emulated '
-                                          'yet.', op.seq.pc.offset, op.seq.uniq)
+                                print('Block contains relative p-code jump at '
+                                          'instruction {}:{}, which is not emulated '
+                                          'yet.'.format(op.seq.getTarget().getOffset(), op.seq.getTime()))
                         if op.opcode == pypcode.OpCode.CBRANCH:
                             irsb._exit_statements.append((
-                                op.seq.pc.offset, op.seq.uniq,
+                                op.seq.getTarget().getOffset(), op.seq.getTime(),
                                 ExitStatement(op.inputs[0].offset, 'Ijk_Boring')))
                         elif op.opcode == pypcode.OpCode.BRANCH:
                             next_block = (op.inputs[0].offset, 'Ijk_Boring')
@@ -148,14 +160,16 @@ def run_script(server_host, server_port):
             return int(getFunction(funcName).getBody().getMinAddress().toString(), 16)
 
         def get_pcode_at_address(address):
+            # Fails when trying to get pcode of an external thunk-ed function
             return currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(address)).getPcode()
 
         def successor_func(state, **run_args):
             currentAddress = state.ip.args[0]
+            print("current address in state:", hex(currentAddress))
             current_pcode = get_pcode_at_address(hex(currentAddress))
             irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
             block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
-            return state.project.factory.successors(state, irsb, **run_args)
+            return state.project.factory.successors(state, irsb=irsb, **run_args)
 
         
         ############ Setup state ##########
@@ -182,24 +196,7 @@ def run_script(server_host, server_port):
 
         ######### Do symbolic execution ########
 
-        #simulation.explore(find=is_successful, avoid=(addrBadFunc,))
-        n = 0
-        while not simulation.complete():
-            #currentAddress = state.ip.args[0]
-            #current_pcode = get_pcode_at_address(hex(currentAddress))
-            #irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
-            #block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
-
-            simulation.step(successor_func=successor_func)
-
-            print(len(simulation.active))
-            for state in simulation.active:
-                print(hex(state.solver.eval(state.ip)))
-
-            n += 1
-            if n == 10:
-                break
-
+        simulation.explore(find=is_successful, avoid=(addrBadFunc,), successor_func=successor_func)
 
         ######## Post run analysis #########
         
