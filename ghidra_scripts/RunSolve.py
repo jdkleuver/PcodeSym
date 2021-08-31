@@ -159,8 +159,15 @@ def run_script(server_host, server_port):
 
         def successor_func(state, **run_args):
             currentAddress = state.ip.args[0]
-            print("current address in state:", hex(currentAddress))
-            current_pcode = get_pcode_at_address(hex(currentAddress))
+            containingFunction = get_function_containing_address(hex(currentAddress))
+            if containingFunction is not None and containingFunction.isThunk():
+                print(get_function_name(containingFunction), "is an external function, getting the pcode from the external library")
+                externalLibraryName = get_library_name(containingFunction)
+                externalProgram = get_external_program(externalLibraryName)
+                current_pcode = get_pcode_of_external_function(externalProgram, get_function_name(containingFunction))
+            else:
+                print("current address in state:", hex(currentAddress))
+                current_pcode = get_pcode_at_address(hex(currentAddress))
             irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
             block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
             return state.project.factory.successors(state, irsb=irsb, **run_args)
@@ -182,10 +189,10 @@ def run_script(server_host, server_port):
             return function.getName()
 
         def get_external_program(library_name):
-            libraryPath = externalManager.getExternalLibrary(library_name).getAssociatedProgramPath()
+            libraryPath = currentProgram.getExternalManager().getExternalLibrary(library_name).getAssociatedProgramPath()
             libraryFile = state.getProject().getProjectData().getFile(libraryPath)
             libraryProgram = libraryFile.getImmutableDomainObject(java.lang.Object(), ghidra.framework.model.DomainFile.DEFAULT_VERSION, None)
-            return libraryProject
+            return libraryProgram
 
         def get_pcode_of_external_function(program, function_name):
             functionManager = program.getFunctionManager()
