@@ -13,19 +13,13 @@ def run_script(server_host, server_port):
 
     # load something ghidra doesn't have
     import angr
-    from angr.engines.pcode.lifter import IRSB, PcodeBasicBlockLifter, ExitStatement
+    from angr.engines.pcode.lifter import IRSB, PcodeBasicBlockLifter, ExitStatement, IRSB_MAX_SIZE, IRSB_MAX_INST, MAX_INSTRUCTIONS, MAX_BYTES
     import claripy
     import sys
     import pypcode
     import archinfo
 
     print("Running inside the bridge!")
-
-    # copying these constants from angr pcode lifter
-    IRSB_MAX_SIZE = 400
-    IRSB_MAX_INST = 99
-    MAX_INSTRUCTIONS = 99999
-    MAX_BYTES = 5000
 
     # create the bridge and load the flat API/ghidra modules into the namespace
     with ghidra_bridge.GhidraBridge(connect_to_host=server_host, connect_to_port=server_port, namespace=globals()) as bridge:
@@ -170,6 +164,50 @@ def run_script(server_host, server_port):
             irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
             block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
             return state.project.factory.successors(state, irsb=irsb, **run_args)
+
+        def get_function_containing_address(address):
+            return currentProgram.getFunctionManager().getFunctionContaining(getAddressFactory().getAddress(address))
+
+        def get_library_name(function):
+            if not function.isThunk():
+                print("Can't find library name for a non-Thunk function")
+                return None
+            thunked_function = function.getThunkedFunction(True)
+            if not thunked_function.isExternal():
+                print("Can't get library name for function that is not external")
+                return None
+            return thunked_function.getExternalLocation().getLibraryName()
+
+        def get_function_name(function):
+            return function.getName()
+
+        def get_external_program(library_name):
+            libraryPath = externalManager.getExternalLibrary(library_name).getAssociatedProgramPath()
+            libraryFile = state.getProject().getProjectData().getFile(libraryPath)
+            libraryProgram = libraryFile.getImmutableDomainObject(java.lang.Object(), ghidra.framework.model.DomainFile.DEFAULT_VERSION, None)
+            return libraryProject
+
+        def get_pcode_of_external_function(program, function_name):
+            functionManager = program.getFunctionManager()
+            for fn in functionManager.getFunctions(True):
+                if fn.getName() == function_name:
+                    function = fn
+                    break
+            if function is None:
+                return None
+            firstInstruction = program.getListing().getInstructionAt(function.getBody().getMinAddress())
+            lastInstruction = program.getListing().getInstructionAt(function.getBody().getMaxAddress())
+            currentInstruction = firstInstruction
+            pcode = []
+            while True:
+                pcode += currentInstruction.getPcode()
+                currentInstruction = currentInstruction.getNext()
+                if currentInstruction == lastInstruction.getNext():
+                    # Reached the end of the function
+                    break
+            return pcode
+
+
 
         
         ############ Setup state ##########
