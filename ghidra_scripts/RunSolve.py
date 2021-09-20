@@ -81,23 +81,28 @@ def run_script(server_host, server_port):
 
                 # Translate
                 addr = baseaddr + bytes_offset
-                #replace this translation with mapping from ghidra PcodeOp to pypcode.TranslationResult
-                #result = self.context.translate(data[bytes_offset:], addr, max_inst, max_bytes, True)
+
+                ##### Start of modified block ######
+
                 pcode_array = []
                 for pcode in pcodes:
                     inputs_varnodes = []
+                    # convert pcode input Varnodes to pypcode Varnodes
                     for inp in pcode.inputs:
                         inputs_varnodes.append(MyVarnode(self.context, inp.getAddress().getAddressSpace(), inp.offset, inp.size, inp))
+                    # convert pcode output Varnode to pypcode Varnode
                     if pcode.output is not None:
                         output_varnode = MyVarnode(self.context, pcode.output.getAddress().getAddressSpace(), pcode.output.offset, pcode.output.size, pcode.output)
                     else:
                         output_varnode = None
+                    # Convert Ghidra raw Pcode to pypcode PcodeOp 
                     pcode_array.append(pypcode.PcodeOp(self.context, pcode.seqnum, pypcode.OpCode(pcode.opcode), inputs_varnodes, output_varnode))
 
                 translations = []
                 addrspace = getAddressFactory().getAddress(hex(baseaddr)).getAddressSpace()
                 address = pypcode.Address(self.context, addrspace, baseaddr)
                 instruction = currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(hex(baseaddr)))
+                # Convert PcodeOps to Translations
                 translation = pypcode.Translation(
                         ctx = self.context,
                         address = address,
@@ -107,6 +112,8 @@ def run_script(server_host, server_port):
                         ops = pcode_array
                 )
                 translations.append(translation)
+
+                ##### End modified block #####
                 
                 irsb._instructions = translations
 
