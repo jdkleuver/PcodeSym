@@ -159,15 +159,22 @@ def run_script(server_host, server_port):
 
         def successor_func(state, **run_args):
             currentAddress = state.ip.args[0]
-            containingFunction = get_function_containing_address(hex(currentAddress))
-            if containingFunction is not None and containingFunction.isThunk():
-                print(get_function_name(containingFunction), "is an external function, getting the pcode from the external library")
-                externalLibraryName = get_library_name(containingFunction)
-                externalProgram = get_external_program(externalLibraryName)
-                current_pcode = get_pcode_of_external_function(externalProgram, get_function_name(containingFunction))
-            else:
-                print("current address in state:", hex(currentAddress))
+            # TODO: fix external functions without falling back to pypcode lifter
+            #containingFunction = get_function_containing_address(hex(currentAddress))
+            #if containingFunction is not None and containingFunction.isThunk():
+            #    print("current address in state:", hex(currentAddress))
+            #    print(get_function_name(containingFunction), "is an external function, getting the pcode from the external library")
+            #    externalLibraryName = get_library_name(containingFunction)
+            #    externalProgram = get_external_program(externalLibraryName)
+            #    current_pcode = get_pcode_of_external_function(externalProgram, get_function_name(containingFunction))
+            #else:
+            print("current address in state:", hex(currentAddress))
+            try:
                 current_pcode = get_pcode_at_address(hex(currentAddress))
+            except AttributeError:
+                print("Couldn't get pcode at address:", hex(currentAddress), "falling back to pypcode lifter")
+                # fallback to original lifter for external function
+                return state.project.factory.successors(state, **run_args)
             irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
             block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
             return state.project.factory.successors(state, irsb=irsb, **run_args)
@@ -206,12 +213,16 @@ def run_script(server_host, server_port):
             lastInstruction = program.getListing().getInstructionAt(function.getBody().getMaxAddress())
             currentInstruction = firstInstruction
             pcode = []
+            pcode += currentInstruction.getPcode()
             while True:
-                pcode += currentInstruction.getPcode()
                 currentInstruction = currentInstruction.getNext()
+                pcode += currentInstruction.getPcode()
                 if currentInstruction == lastInstruction.getNext():
                     # Reached the end of the function
                     break
+            print("Min address:", function.getBody().getMinAddress()) 
+            print("Max address:", function.getBody().getMaxAddress()) 
+            print("Pcodes:", pcode)
             return pcode
 
 
@@ -247,11 +258,11 @@ def run_script(server_host, server_port):
         
         #print(project.analyses.CFGEmulated())
         
-        #if len(simulation.found) > 0:
-        #    for solution_state in simulation.found:
-        #        print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
-        #else:
-        #    print("[>>>] no solution found :(") 
+        if len(simulation.found) > 0:
+            for solution_state in simulation.found:
+                print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
+        else:
+            print("[>>>] no solution found :(") 
 
 if __name__ == "__main__":
 
