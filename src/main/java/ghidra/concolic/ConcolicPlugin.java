@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package concolic;
+package ghidra.concolic;
 import ghidra.app.ExamplesPluginPackage;
 import ghidra.app.plugin.PluginCategoryNames;
 import ghidra.app.plugin.ProgramPlugin;
@@ -35,7 +35,6 @@ import ghidra.framework.plugintool.util.PluginStatus;
 public class ConcolicPlugin extends ProgramPlugin {
 
     ConcolicMenu menu;
-    ConcolicAnalyzer analyzer;
 
 	/**
 	 * Plugin constructor.
@@ -44,8 +43,7 @@ public class ConcolicPlugin extends ProgramPlugin {
 	 */
 	public ConcolicPlugin(PluginTool tool) {
 		super(tool, true, true);
-		analyzer = new ConcolicAnalyzer();
-        menu = new ConcolicMenu(this, analyzer);
+        menu = new ConcolicMenu(this);
 	}
 
 	@Override

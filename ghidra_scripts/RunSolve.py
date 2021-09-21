@@ -153,7 +153,7 @@ def run_script(server_host, server_port):
                 irsb.next, irsb.jumpkind = next_block
         
         def is_successful(state):
-            if(state.ip.args[0] == addrGoodFunc):
+            if(state.ip.args[0] == sink):
                 return True
             return False
         
@@ -232,6 +232,25 @@ def run_script(server_host, server_port):
             print("Pcodes:", pcode)
             return pcode
 
+        def get_sink_address():
+            sink_addr = ghidra.concolic.ConcolicAnalyzer.getSink()
+            if sink_addr is None:
+                print('Please set the Sink address before running the script!')
+                sys.exit(1)
+            return int(sink_addr.toString(), 16)
+
+        def get_avoid_addresses():
+            avoid_addrs = [int(address.toString(), 16) for address in ghidra.concolic.ConcolicAnalyzer.getAvoidAddresses()]
+            if len(avoid_addrs) == 0:
+                print('WARN: list of avoid addresses is empty')
+            return avoid_addrs
+
+        def get_source_address():
+            source_addr = ghidra.concolic.ConcolicAnalyzer.getSource()
+            if source_addr is None:
+                print('Please set the Source address before running the script!')
+                sys.exit(1)
+            return int(source_addr.toString(), 16)
 
 
         
@@ -243,13 +262,13 @@ def run_script(server_host, server_port):
         
         project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
         
-        addrGoodFunc = get_func_address('win')
-        addrBadFunc = get_func_address('lose')
-        startAddress = get_func_address('start')
+        sink = get_sink_address()
+        avoids = get_avoid_addresses()
+        start = get_source_address()
         
         bv = claripy.BVS('sym_arg',8*32)
         
-        call_state = project.factory.call_state(startAddress, bv, add_options={angr.options.LAZY_SOLVES,
+        call_state = project.factory.call_state(start, bv, add_options={angr.options.LAZY_SOLVES,
                                               angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS})
         
         
@@ -259,7 +278,7 @@ def run_script(server_host, server_port):
 
         ######### Do symbolic execution ########
 
-        simulation.explore(find=is_successful, avoid=(addrBadFunc,), successor_func=successor_func)
+        simulation.explore(find=is_successful, avoid=avoids, successor_func=successor_func)
 
         ######## Post run analysis #########
         

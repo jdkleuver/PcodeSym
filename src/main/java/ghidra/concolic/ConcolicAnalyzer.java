@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package concolic;
+package ghidra.concolic;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import javax.swing.JOptionPane;
 import ghidra.program.model.address.Address;
@@ -25,30 +26,40 @@ import ghidra.program.model.address.Address;
  */
 public class ConcolicAnalyzer {
 
-    static List<Address> avoidAddresses;
-    static List<Address> sinks;
-    static Address currentSinkAddress = null;
+    public static List<Address> avoidAddresses = new ArrayList<>();
+    public static Address sinkAddress = null;
+    public static Address sourceAddress = null;
     static final String scriptName = "RunSolve.py";
 
-	public ConcolicAnalyzer() {
+	private ConcolicAnalyzer() {
 	}
 	
-	public void setSink(Address address) {
-		currentSinkAddress = address;
+	public static void setSink(Address address) {
+		sinkAddress = address;
 		return;
 	}
 
-	public void unSetSink() {
-		currentSinkAddress = null;
+	public static void unSetSink() {
+		sinkAddress = null;
 		return;
 	}
 	
-	public void addAvoidAddress(Address address) {
+	public static void setSource(Address address) {
+		sourceAddress = address;
+		return;
+	}
+
+	public static void unSetSource() {
+		sourceAddress = null;
+		return;
+	}
+	
+	public static void addAvoidAddress(Address address) {
 		avoidAddresses.add(address);
 		return;
 	}
 	
-	public boolean removeAvoidAddress(Address address) {
+	public static boolean removeAvoidAddress(Address address) {
         if(avoidAddresses.contains(address)) {
             avoidAddresses.remove(address);
             return true;
@@ -56,7 +67,20 @@ public class ConcolicAnalyzer {
         return false;
 	}
 	
-	public void solve() {
+	public static  void solve() {
 		JOptionPane.showMessageDialog(null, "This button doesn't work currently, please manually run the '" + scriptName + "' from the script manager", "Not yet implemented", JOptionPane.INFORMATION_MESSAGE);
 	}
+	
+	public static Address getSource() {
+		return sourceAddress;
+	}
+	
+	public static List<Address> getAvoidAddresses() {
+		return avoidAddresses;
+	}
+	
+	public static Address getSink() {
+		return sinkAddress;
+	}
+	
 }

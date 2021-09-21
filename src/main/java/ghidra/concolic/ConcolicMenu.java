@@ -1,4 +1,4 @@
-package concolic;
+package ghidra.concolic;
 import ghidra.app.context.ListingContextAction;
 import ghidra.app.context.ListingActionContext;
 import ghidra.framework.plugintool.*;
@@ -11,12 +11,10 @@ public class ConcolicMenu extends ListingContextAction {
 
 
     static PluginTool tool;
-    private ConcolicAnalyzer analyzer;
 
-    public ConcolicMenu(ConcolicPlugin plugin, ConcolicAnalyzer analyzer) {
+    public ConcolicMenu(ConcolicPlugin plugin) {
         super("ConcolicPlugin", plugin.getName());
         tool = plugin.getTool();
-        this.analyzer = analyzer;
         createMenus();
     }
 
@@ -29,7 +27,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction SetSink = new ListingContextAction("Set Sink Address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-                analyzer.setSink(context.getLocation().getAddress());
+                ConcolicAnalyzer.setSink(context.getLocation().getAddress());
             }
         };
 
@@ -43,7 +41,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction UnSetSink = new ListingContextAction("Unset Sink Address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-                analyzer.unSetSink();
+            	ConcolicAnalyzer.unSetSink();
             }
         };
 
@@ -53,11 +51,39 @@ public class ConcolicMenu extends ListingContextAction {
             "Sink Address"
         }, null, GroupName));
         tool.addAction(UnSetSink);
+        
+        ListingContextAction SetSource = new ListingContextAction("Set Source Address", getName()) {
+            @Override
+            protected void actionPerformed(ListingActionContext context) {
+                ConcolicAnalyzer.setSource(context.getLocation().getAddress());
+            }
+        };
+
+        SetSource.setPopupMenuData(new MenuData(new String[] {
+            MenuName,
+            "Set",
+            "Source Address"
+        }, null, GroupName));
+        tool.addAction(SetSource);
+
+        ListingContextAction UnSetSource = new ListingContextAction("Unset Source Address", getName()) {
+            @Override
+            protected void actionPerformed(ListingActionContext context) {
+            	ConcolicAnalyzer.unSetSource();
+            }
+        };
+
+        UnSetSink.setPopupMenuData(new MenuData(new String[] {
+            MenuName,
+            "Unset",
+            "Source Address"
+        }, null, GroupName));
+        tool.addAction(UnSetSource);
 
         ListingContextAction addAvoidAddress = new ListingContextAction("Add address to avoid", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-                analyzer.addAvoidAddress(context.getLocation().getAddress());
+            	ConcolicAnalyzer.addAvoidAddress(context.getLocation().getAddress());
             }
         };
 
@@ -71,7 +97,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction removeAvoidAddress = new ListingContextAction("Remove address from list to avoid", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-                if(!analyzer.removeAvoidAddress(context.getLocation().getAddress()))
+                if(!ConcolicAnalyzer.removeAvoidAddress(context.getLocation().getAddress()))
                 	JOptionPane.showMessageDialog(null, "Address was not found in the list", "Warning", JOptionPane.WARNING_MESSAGE);
             }
         };
@@ -86,7 +112,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction solve = new ListingContextAction("Run angr to solve", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-            	analyzer.solve();
+            	ConcolicAnalyzer.solve();
             }
         };
         solve.setMenuBarData(new MenuData(new String[] {
