@@ -4,10 +4,11 @@ import ghidra.app.context.ListingActionContext;
 import ghidra.framework.plugintool.*;
 import docking.action.MenuData;
 import javax.swing.JOptionPane;
+import javax.swing.JFileChooser;
 
 public class ConcolicMenu extends ListingContextAction {
-    public final String MenuName = "Concolic Execution";
-    public final String GroupName = "concolic";
+    public final String MenuName = "PcodeSym";
+    public final String GroupName = "PcodeSym";
 
 
     static PluginTool tool;
@@ -41,7 +42,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction UnSetSink = new ListingContextAction("Unset Sink Address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-            	ConcolicAnalyzer.unSetSink();
+                ConcolicAnalyzer.unSetSink();
             }
         };
 
@@ -69,11 +70,11 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction UnSetSource = new ListingContextAction("Unset Source Address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-            	ConcolicAnalyzer.unSetSource();
+                ConcolicAnalyzer.unSetSource();
             }
         };
 
-        UnSetSink.setPopupMenuData(new MenuData(new String[] {
+        UnSetSource.setPopupMenuData(new MenuData(new String[] {
             MenuName,
             "Unset",
             "Source Address"
@@ -83,7 +84,7 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction addAvoidAddress = new ListingContextAction("Add address to avoid", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-            	ConcolicAnalyzer.addAvoidAddress(context.getLocation().getAddress());
+                ConcolicAnalyzer.addAvoidAddress(context.getLocation().getAddress());
             }
         };
 
@@ -98,7 +99,7 @@ public class ConcolicMenu extends ListingContextAction {
             @Override
             protected void actionPerformed(ListingActionContext context) {
                 if(!ConcolicAnalyzer.removeAvoidAddress(context.getLocation().getAddress()))
-                	JOptionPane.showMessageDialog(null, "Address was not found in the list", "Warning", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "Address was not found in the list", "Warning", JOptionPane.WARNING_MESSAGE);
             }
         };
 
@@ -112,14 +113,33 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction solve = new ListingContextAction("Run angr to solve", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-            	ConcolicAnalyzer.solve();
+                ConcolicAnalyzer.solve();
             }
         };
         solve.setMenuBarData(new MenuData(new String[] {
             "Tools",
-            "Concolic Execution",
+            "PcodeSym",
             "Solve"
         }, null, GroupName));
         tool.addAction(solve);
+
+        ListingContextAction setPython = new ListingContextAction("Set the path of the Python 3 interpreter to use (virtualenv recommended, needs to have angr, pypcode and ghidra_bridge installed)", getName()) {
+            @Override
+            protected void actionPerformed(ListingActionContext context) {
+                JFileChooser fc = new JFileChooser();
+                fc.setMultiSelectionEnabled(false);
+                int retVal = fc.showOpenDialog(null);
+                if (retVal == JFileChooser.APPROVE_OPTION) {
+                    String pythonPath = fc.getSelectedFile().getAbsolutePath();
+                    ConcolicAnalyzer.setPython(pythonPath);
+                }
+            }
+        };
+        setPython.setMenuBarData(new MenuData(new String[] {
+            "Tools",
+            "PcodeSym",
+            "Set python 3 interpreter"
+        }, null, GroupName));
+        tool.addAction(setPython);
     }
 }
