@@ -23,6 +23,15 @@ def run_script(server_host, server_port):
 
     # create the bridge and load the flat API/ghidra modules into the namespace
     with ghidra_bridge.GhidraBridge(connect_to_host=server_host, connect_to_port=server_port, namespace=globals()) as bridge:
+        class MemoryMapping():
+            def __init__(self, program, startAddress):
+                self.program = program
+                self.startAddress = startAddress
+
+        # when calling an external function, we need to remember which function and library it is that we call
+        next_function = ""
+        next_library = ""
+
         class MySpace():
             def __init__(self, name):
                 self.name = name
@@ -66,7 +75,9 @@ def run_script(server_host, server_port):
             '''
             def lift(self,
                      irsb,
+                     program,
                      baseaddr,
+                     adjusted_address,
                      pcodes,
                      bytes_offset = 0,
                      max_bytes = None,
@@ -101,7 +112,7 @@ def run_script(server_host, server_port):
                 translations = []
                 addrspace = getAddressFactory().getAddress(hex(baseaddr)).getAddressSpace()
                 address = pypcode.Address(self.context, addrspace, baseaddr)
-                instruction = currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(hex(baseaddr)))
+                instruction = program.getListing().getInstructionAt(getAddressFactory().getAddress(adjusted_address))
                 # Convert PcodeOps to Translations
                 translation = pypcode.Translation(
                         ctx = self.context,
@@ -162,28 +173,52 @@ def run_script(server_host, server_port):
 
         def get_pcode_at_address(address):
             # Fails when trying to get pcode of an external thunk-ed function
-            return currentProgram.getListing().getInstructionAt(getAddressFactory().getAddress(address)).getPcode()
+            try:
+                return getCurrentProgram().getListing().getInstructionAt(getAddressFactory().getAddress(address)).getPcode(), getCurrentProgram(), address
+            except AttributeError:
+                # The address doesn't exist in the main program, check if globals are set
+                global next_library
+                global next_function
+                if next_library != "" and next_function != "":
+                    external_program = get_external_program(next_library)
+                    functionManager = external_program.getFunctionManager()
+                    for fn in functionManager.getFunctions(True):
+                        if fn.getName() == next_function:
+                            function = fn
+                            break
+                    if function is None:
+                        # couldn't find the function in external program, propagate exception
+                        print("Couldn't find function {} in {}".format(next_function, next_library))
+                        raise
+                    functionAddress = function.getBody().getMinAddress().getOffset()
+                    memory_start = int(address, 16) - (functionAddress - external_program.getImageBase().getOffset()) # find the address where this library is mapped in memory 
+                    address_in_program = hex(int(address, 16) - memory_start + external_program.getImageBase().getOffset())
+                    print("Address {} is at {} in program {}".format(address, address_in_program, next_library))
+                    next_library = ""
+                    next_function = ""
+                    return external_program.getListing().getInstructionAt(getAddressFactory().getAddress(address_in_program)).getPcode(), external_program, address_in_program
 
         def successor_func(state, **run_args):
             currentAddress = state.ip.args[0]
-            # TODO: fix external functions without falling back to pypcode lifter
-            #containingFunction = get_function_containing_address(hex(currentAddress))
-            #if containingFunction is not None and containingFunction.isThunk():
-            #    print("current address in state:", hex(currentAddress))
-            #    print(get_function_name(containingFunction), "is an external function, getting the pcode from the external library")
-            #    externalLibraryName = get_library_name(containingFunction)
-            #    externalProgram = get_external_program(externalLibraryName)
-            #    current_pcode = get_pcode_of_external_function(externalProgram, get_function_name(containingFunction))
-            #else:
+            containingFunction = get_function_containing_address(hex(currentAddress))
             print("current address in state:", hex(currentAddress))
+            # figure out if we are about to make a call to an external program
+            if containingFunction is not None and containingFunction.isThunk():
+                externalLibraryName = get_library_name(containingFunction)
+                print("Preparing for external function call to {} in {}".format(get_function_name(containingFunction), externalLibraryName))
+                # prepare to get the function in the external program
+                global next_library
+                global next_function
+                next_library = externalLibraryName
+                next_function = get_function_name(containingFunction)
             try:
-                current_pcode = get_pcode_at_address(hex(currentAddress))
+                current_pcode, program, adjusted_address = get_pcode_at_address(hex(currentAddress))
             except AttributeError:
                 print("Couldn't get pcode at address:", hex(currentAddress), "falling back to pypcode lifter")
                 # fallback to original lifter for external function
                 return state.project.factory.successors(state, **run_args)
             irsb = IRSB.empty_block(archinfo.ArchAMD64, currentAddress, None, None, None, None, None, None)
-            block_lifter.lift(irsb, currentAddress, current_pcode, 0, None, None)
+            block_lifter.lift(irsb, program, currentAddress, adjusted_address, current_pcode, 0, None, None)
             return state.project.factory.successors(state, irsb=irsb, **run_args)
 
         def get_function_containing_address(address):
@@ -252,14 +287,12 @@ def run_script(server_host, server_port):
                 sys.exit(1)
             return int(source_addr.toString(), 16)
 
-
-        
         ############ Setup state ##########
 
         # Get program name from ghidra
         filename = getCurrentProgram().getExecutablePath()
-        base_address = getCurrentProgram().getMinAddress().getOffset()
-        
+        base_address = getCurrentProgram().getImageBase().getOffset()
+
         project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
         
         sink = get_sink_address()
