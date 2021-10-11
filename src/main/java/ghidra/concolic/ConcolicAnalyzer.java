@@ -49,6 +49,14 @@ public class ConcolicAnalyzer {
         sourceAddress = address;
         return;
     }
+    
+    public static void setArgs() {
+        // if the start point is a function call, allow the function arguments to be specified as concrete or symbolic bitvectors
+    }
+
+    public static void setStdin() {
+        // allow stdin to be treated as an array of concrete or symbolic bitvectors, when symbolic execution happens all of these bitvectors will be concatenated
+    }
 
     public static void unSetSource() {
         sourceAddress = null;

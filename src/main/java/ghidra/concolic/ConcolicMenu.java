@@ -3,8 +3,12 @@ import ghidra.app.context.ListingContextAction;
 import ghidra.app.context.ListingActionContext;
 import ghidra.framework.plugintool.*;
 import docking.action.MenuData;
-import javax.swing.JOptionPane;
-import javax.swing.JFileChooser;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
 
 public class ConcolicMenu extends ListingContextAction {
     public final String MenuName = "PcodeSym";
@@ -57,6 +61,116 @@ public class ConcolicMenu extends ListingContextAction {
             @Override
             protected void actionPerformed(ListingActionContext context) {
                 ConcolicAnalyzer.setSource(context.getLocation().getAddress());
+                // Create dialog box for the concrete/symbolic inputs
+                ArrayList<JPanel> functionArgs = new ArrayList<>();
+                ArrayList<JPanel> stdin = new ArrayList<>();
+                JPanel mainPanel = new JPanel();
+                
+                JPanel funcArgsContainer = new JPanel();
+                funcArgsContainer.setLayout(new BoxLayout(funcArgsContainer, BoxLayout.Y_AXIS));
+
+                JButton addFuncArg = new JButton("Add Function Argument");
+                funcArgsContainer.add(addFuncArg);
+                
+                JButton addStdin = new JButton("Add to stdin");
+                
+                JPanel stdinContainer = new JPanel();
+                stdinContainer.setLayout(new BoxLayout(stdinContainer, BoxLayout.Y_AXIS));
+                stdinContainer.add(addStdin);
+                
+                mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+                mainPanel.setBorder(new EmptyBorder(new Insets(20, 20, 20, 20)));
+                mainPanel.add(funcArgsContainer);
+                mainPanel.add(new JPanel()); // Padding
+                mainPanel.add(new JSeparator());
+                mainPanel.add(new JPanel()); // Padding
+                mainPanel.add(stdinContainer);
+
+                JOptionPane pane = new JOptionPane(mainPanel, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
+                JDialog dialog = pane.createDialog(null, "Add inputs");
+
+                addFuncArg.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        JPanel newPanel = new JPanel();
+                        newPanel.setLayout(new GridLayout(0, 3));
+                        JRadioButton r1 = new JRadioButton("Concrete");
+                        JRadioButton r2 = new JRadioButton("Symbolic");
+                        ButtonGroup bg = new ButtonGroup();
+                        bg.add(r1);
+                        bg.add(r2);
+                        JLabel argLabel = new JLabel("Argument " + (functionArgs.size()+1));
+                        JTextField tf = new JTextField("Value");
+                        JCheckBox pointer = new JCheckBox("Pointer");
+                        newPanel.add(argLabel);
+                        newPanel.add(r1);
+                        newPanel.add(new JPanel()); // Padding
+                        newPanel.add(tf);
+                        newPanel.add(r2);
+                        newPanel.add(pointer);
+                        r2.setSelected(true);
+                        functionArgs.add(newPanel);
+                        funcArgsContainer.removeAll();
+                        for(JPanel panel: functionArgs) {
+                            funcArgsContainer.add(new JSeparator());
+                            funcArgsContainer.add(panel);
+                        }
+                        funcArgsContainer.add(addFuncArg);
+                        stdinContainer.revalidate();
+                        funcArgsContainer.revalidate();
+                        mainPanel.revalidate();
+                        dialog.pack();
+                    }
+                });
+
+                addStdin.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        JPanel newPanel = new JPanel();
+                        newPanel.setLayout(new GridLayout(0, 2));
+                        JRadioButton r1 = new JRadioButton("Concrete");
+                        JRadioButton r2 = new JRadioButton("Symbolic");
+                        ButtonGroup bg = new ButtonGroup();
+                        bg.add(r1);
+                        bg.add(r2);
+                        JLabel argLabel = new JLabel("Part " + (stdin.size()+1));
+                        JTextField tf = new JTextField("Value");
+                        newPanel.add(argLabel);
+                        newPanel.add(r1);
+                        newPanel.add(tf);
+                        newPanel.add(r2);
+                        r2.setSelected(true);
+                        stdin.add(newPanel);
+                        stdinContainer.removeAll();
+                        stdinContainer.add(addStdin);
+                        for(JPanel panel: stdin) {
+                            stdinContainer.add(panel);
+                            stdinContainer.add(new JSeparator());
+                        }
+                        stdinContainer.revalidate();
+                        funcArgsContainer.revalidate();
+                        mainPanel.revalidate();
+                        dialog.pack();
+                    }
+                });
+
+                dialog.show();
+
+                ArrayList<FunctionArgument> funcArgs = new ArrayList<>();
+
+                for(JPanel panel: functionArgs) {
+                    JTextField value = (JTextField) panel.getComponents()[3];
+                    JRadioButton symbolic = (JRadioButton) panel.getComponents()[4];
+                    JCheckBox pointer = (JCheckBox) panel.getComponents()[5];
+                    funcArgs.add(new FunctionArgument(value.getText(), symbolic.isSelected(), pointer.isSelected()));
+                }
+
+                ArrayList<StdinPart> stdinParts = new ArrayList<>();
+
+                for(JPanel panel: stdin) {
+                    JTextField value = (JTextField) panel.getComponents()[2];
+                    JRadioButton symbolic = (JRadioButton) panel.getComponents()[3];
+                    stdinParts.add(new StdinPart(value.getText(), symbolic.isSelected()));
+                }
+
             }
         };
 
