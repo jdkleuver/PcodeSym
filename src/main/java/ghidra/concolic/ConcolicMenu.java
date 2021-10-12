@@ -151,7 +151,7 @@ public class ConcolicMenu extends ListingContextAction {
                     }
                 });
 
-                dialog.show();
+                dialog.setVisible(true);
                 int response;
                 if(pane.getValue() instanceof Integer)
                     response = ((Integer) pane.getValue()).intValue();
