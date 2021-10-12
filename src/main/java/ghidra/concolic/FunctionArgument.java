@@ -1,9 +1,9 @@
 package ghidra.concolic;
 
 public class FunctionArgument {
-    String value;
-    boolean symbolic;
-    boolean pointer;
+    public String value;
+    public boolean symbolic;
+    public boolean pointer;
 
     public FunctionArgument(String value, boolean symbolic, boolean pointer) {
             this.value = value;
@@ -13,5 +13,17 @@ public class FunctionArgument {
 
     public String toString() {
         return "Value: " + value + "\nSymbolic: " + symbolic + "\nPointer: " + pointer + "\n";
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public boolean getSymbolic() {
+        return symbolic;
+    }
+
+    public boolean getPointer() {
+        return pointer;
     }
 }

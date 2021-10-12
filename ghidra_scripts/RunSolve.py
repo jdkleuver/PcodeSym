@@ -299,12 +299,33 @@ def run_script(server_host, server_port):
         avoids = get_avoid_addresses()
         start = get_source_address()
         
-        bv = claripy.BVS('sym_arg',8*32)
-        
-        call_state = project.factory.call_state(start, bv, add_options={angr.options.LAZY_SOLVES,
+        stdin_args = []
+        for buff in ghidra.concolic.ConcolicAnalyzer.getStdin():
+            if buff.getSymbolic():
+                stdin_args.append(claripy.BVS('arg' + str(len(stdin_args)), len(buff.getValue())*8)) 
+            else:
+                # process string with escape characters into a bytestring
+                value = buff.getValue().encode('utf-8').decode('unicode-escape').encode('utf-8')
+                stdin_args.append(claripy.BVV(value))
+        stdin_arg = angr.SimFileStream(name='stdin', content=claripy.Concat(*stdin_args), has_end=False)
+
+        func_args = []
+        for arg in ghidra.concolic.ConcolicAnalyzer.getArgs():
+            if arg.getSymbolic():
+                bv = claripy.BVS('arg'+str(len(func_args)), len(arg.getValue())*8)
+            else:
+                # process string with escape characters into a bytestring
+                value = arg.getValue().encode('utf-8').decode('unicode-escape').encode('utf-8')
+                bv = claripy.BVV(value)
+            if arg.getPointer():
+                func_args.append(angr.PointerWrapper(bv)) # not tested, not sure how well this would work
+            else:
+                func_args.append(bv)
+ 
+        call_state = project.factory.call_state(start, *func_args, stdin=stdin_arg, add_options={angr.options.LAZY_SOLVES,
                                               angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS})
-        
-        
+
+
         simulation = project.factory.simgr(call_state)
 
         block_lifter = GhidraPcodeBlockLifter(archinfo.ArchAMD64)
@@ -317,9 +338,12 @@ def run_script(server_host, server_port):
         
         #print(project.analyses.CFGEmulated())
         
+
         if len(simulation.found) > 0:
             for solution_state in simulation.found:
-                print("[>>] {!r}".format(solution_state.solver.eval(bv, cast_to=bytes).split(b"\0")[0]))
+                for i, arg in enumerate(func_args):
+                    print("[>>] arg {}: {!r}".format(i+1, solution_state.solver.eval(arg, cast_to=bytes).split(b"\0")[0]))
+                print("stdin: {}".format(solution_state.posix.dumps(0)))
         else:
             print("[>>>] no solution found :(") 
 

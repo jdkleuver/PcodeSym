@@ -60,7 +60,6 @@ public class ConcolicMenu extends ListingContextAction {
         ListingContextAction SetSource = new ListingContextAction("Set Source Address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-                ConcolicAnalyzer.setSource(context.getLocation().getAddress());
                 // Create dialog box for the concrete/symbolic inputs
                 ArrayList<JPanel> functionArgs = new ArrayList<>();
                 ArrayList<JPanel> stdin = new ArrayList<>();
@@ -153,22 +152,31 @@ public class ConcolicMenu extends ListingContextAction {
                 });
 
                 dialog.show();
+                int response;
+                if(pane.getValue() instanceof Integer)
+                    response = ((Integer) pane.getValue()).intValue();
+                else
+                    response = -1;
+                if(response == JOptionPane.OK_OPTION) {
+                    ConcolicAnalyzer.setSource(context.getLocation().getAddress());
+                    ArrayList<FunctionArgument> funcArgs = new ArrayList<>();
 
-                ArrayList<FunctionArgument> funcArgs = new ArrayList<>();
+                    for(JPanel panel: functionArgs) {
+                        JTextField value = (JTextField) panel.getComponents()[3];
+                        JRadioButton symbolic = (JRadioButton) panel.getComponents()[4];
+                        JCheckBox pointer = (JCheckBox) panel.getComponents()[5];
+                        funcArgs.add(new FunctionArgument(value.getText(), symbolic.isSelected(), pointer.isSelected()));
+                    }
+                    ConcolicAnalyzer.setArgs(funcArgs);
 
-                for(JPanel panel: functionArgs) {
-                    JTextField value = (JTextField) panel.getComponents()[3];
-                    JRadioButton symbolic = (JRadioButton) panel.getComponents()[4];
-                    JCheckBox pointer = (JCheckBox) panel.getComponents()[5];
-                    funcArgs.add(new FunctionArgument(value.getText(), symbolic.isSelected(), pointer.isSelected()));
-                }
+                    ArrayList<StdinPart> stdinParts = new ArrayList<>();
 
-                ArrayList<StdinPart> stdinParts = new ArrayList<>();
-
-                for(JPanel panel: stdin) {
-                    JTextField value = (JTextField) panel.getComponents()[2];
-                    JRadioButton symbolic = (JRadioButton) panel.getComponents()[3];
-                    stdinParts.add(new StdinPart(value.getText(), symbolic.isSelected()));
+                    for(JPanel panel: stdin) {
+                        JTextField value = (JTextField) panel.getComponents()[2];
+                        JRadioButton symbolic = (JRadioButton) panel.getComponents()[3];
+                        stdinParts.add(new StdinPart(value.getText(), symbolic.isSelected()));
+                    }
+                    ConcolicAnalyzer.setStdin(stdinParts);
                 }
 
             }

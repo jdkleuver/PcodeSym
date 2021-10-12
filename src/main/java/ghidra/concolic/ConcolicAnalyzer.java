@@ -30,7 +30,10 @@ public class ConcolicAnalyzer {
     public static Address sinkAddress = null;
     public static Address sourceAddress = null;
     public static String pythonPath = "python3"; // Default to "python3" interpreter, unless another one is selected
+    public static List<FunctionArgument> funcArgs = null;
+    public static List<StdinPart> stdin = null;
     static final String scriptName = "RunSolve.py";
+
 
     private ConcolicAnalyzer() {
     }
@@ -50,12 +53,22 @@ public class ConcolicAnalyzer {
         return;
     }
     
-    public static void setArgs() {
+    public static void setArgs(List<FunctionArgument> functionArgs) {
         // if the start point is a function call, allow the function arguments to be specified as concrete or symbolic bitvectors
+        funcArgs = functionArgs;
     }
 
-    public static void setStdin() {
+    public static List<FunctionArgument> getArgs() {
+        return funcArgs;
+    }
+
+    public static void setStdin(List<StdinPart> stdinParts) {
         // allow stdin to be treated as an array of concrete or symbolic bitvectors, when symbolic execution happens all of these bitvectors will be concatenated
+        stdin = stdinParts;
+    }
+
+    public static List<StdinPart> getStdin() {
+        return stdin;
     }
 
     public static void unSetSource() {
