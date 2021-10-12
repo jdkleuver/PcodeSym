@@ -1,29 +1,30 @@
 package ghidra.concolic;
+import java.util.List;
 
 public class FunctionArgument {
-    public String value;
+    public List<String> values;
     public boolean symbolic;
-    public boolean pointer;
+    public boolean array;
 
-    public FunctionArgument(String value, boolean symbolic, boolean pointer) {
-            this.value = value;
+    public FunctionArgument(List<String> values, boolean symbolic, boolean array) {
+            this.values = values;
             this.symbolic = symbolic;
-            this.pointer = pointer;
+            this.array = array;
     }
 
     public String toString() {
-        return "Value: " + value + "\nSymbolic: " + symbolic + "\nPointer: " + pointer + "\n";
+        return "Values: " + values + "\nSymbolic: " + symbolic + "\nArray: " + array + "\n";
     }
 
-    public String getValue() {
-        return value;
+    public List<String> getValues() {
+        return values;
     }
 
     public boolean getSymbolic() {
         return symbolic;
     }
 
-    public boolean getPointer() {
-        return pointer;
+    public boolean getArray() {
+        return array;
     }
 }

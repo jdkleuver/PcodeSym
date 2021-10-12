@@ -311,20 +311,21 @@ def run_script(server_host, server_port):
 
         func_args = []
         for arg in ghidra.concolic.ConcolicAnalyzer.getArgs():
-            if arg.getSymbolic():
-                bv = claripy.BVS('arg'+str(len(func_args)), len(arg.getValue())*8)
+            array_elems = []
+            for elem in arg.getValues():
+                if arg.getSymbolic():
+                    array_elems.append(claripy.BVS('arg'+str(len(func_args)), len(elem)*8))
+                else:
+                    # process string with escape characters into a bytestring
+                    value = elem.encode('utf-8').decode('unicode-escape').encode('utf-8')
+                    array_elems.append(claripy.BVV(value))
+            if arg.getArray():
+                func_args.append([angr.PointerWrapper(e) for e in array_elems])
             else:
-                # process string with escape characters into a bytestring
-                value = arg.getValue().encode('utf-8').decode('unicode-escape').encode('utf-8')
-                bv = claripy.BVV(value)
-            if arg.getPointer():
-                func_args.append(angr.PointerWrapper(bv)) # not tested, not sure how well this would work
-            else:
-                func_args.append(bv)
+                func_args.append(array_elems[0])
  
         call_state = project.factory.call_state(start, *func_args, stdin=stdin_arg, add_options={angr.options.LAZY_SOLVES,
                                               angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS})
-
 
         simulation = project.factory.simgr(call_state)
 
@@ -342,7 +343,12 @@ def run_script(server_host, server_port):
         if len(simulation.found) > 0:
             for solution_state in simulation.found:
                 for i, arg in enumerate(func_args):
-                    print("[>>] arg {}: {!r}".format(i+1, solution_state.solver.eval(arg, cast_to=bytes).split(b"\0")[0]))
+                    if isinstance(arg, list):
+                        print("[>>] arg {}:".format(i+1))
+                        for k, elem in enumerate(arg):
+                            print("\t{}: {!r}".format(k+1, solution_state.solver.eval(elem.value, cast_to=bytes).split(b"\0")[0]))
+                    else:
+                        print("[>>] arg {}: {!r}".format(i+1, solution_state.solver.eval(arg, cast_to=bytes).split(b"\0")[0]))
                 print("stdin: {}".format(solution_state.posix.dumps(0)))
         else:
             print("[>>>] no solution found :(") 

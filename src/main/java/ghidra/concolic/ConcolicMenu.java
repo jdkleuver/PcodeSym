@@ -8,6 +8,8 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.util.ArrayList;
 
 public class ConcolicMenu extends ListingContextAction {
@@ -88,24 +90,55 @@ public class ConcolicMenu extends ListingContextAction {
                 JOptionPane pane = new JOptionPane(mainPanel, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
                 JDialog dialog = pane.createDialog(null, "Add inputs");
 
+
                 addFuncArg.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         JPanel newPanel = new JPanel();
-                        newPanel.setLayout(new GridLayout(0, 3));
+                        newPanel.setLayout(new BoxLayout(newPanel, BoxLayout.X_AXIS));
                         JRadioButton r1 = new JRadioButton("Concrete");
                         JRadioButton r2 = new JRadioButton("Symbolic");
                         ButtonGroup bg = new ButtonGroup();
                         bg.add(r1);
                         bg.add(r2);
                         JLabel argLabel = new JLabel("Argument " + (functionArgs.size()+1));
-                        JTextField tf = new JTextField("Value");
-                        JCheckBox pointer = new JCheckBox("Pointer");
+                        JTextField tf = new JTextField("Element");
+                        JCheckBox array = new JCheckBox("Array");
+                        JButton addArrayElem = new JButton("Add array element");
+                        addArrayElem.setVisible(false);
+                        addArrayElem.addActionListener(new ActionListener() {
+                            public void actionPerformed(ActionEvent e) {
+                                    newPanel.add(new JTextField("Element"));
+                                    newPanel.revalidate();
+                                    dialog.pack();
+                            }
+                        });
+                        array.addItemListener(new ItemListener() {
+                            public void itemStateChanged(ItemEvent e) {
+                                if(e.getStateChange() == ItemEvent.SELECTED) {
+                                   addArrayElem.setVisible(true); 
+                                   newPanel.revalidate();
+                                   dialog.pack();
+                                }
+                                else {
+                                   addArrayElem.setVisible(false);
+                                   newPanel.removeAll();
+                                   newPanel.add(argLabel);
+                                   newPanel.add(r1);
+                                   newPanel.add(r2);
+                                   newPanel.add(array);
+                                   newPanel.add(addArrayElem);
+                                   newPanel.add(tf);
+                                   newPanel.revalidate();
+                                   dialog.pack();
+                                }
+                            }
+                        });
                         newPanel.add(argLabel);
                         newPanel.add(r1);
-                        newPanel.add(new JPanel()); // Padding
-                        newPanel.add(tf);
                         newPanel.add(r2);
-                        newPanel.add(pointer);
+                        newPanel.add(array);
+                        newPanel.add(addArrayElem);
+                        newPanel.add(tf);
                         r2.setSelected(true);
                         functionArgs.add(newPanel);
                         funcArgsContainer.removeAll();
@@ -113,6 +146,7 @@ public class ConcolicMenu extends ListingContextAction {
                             funcArgsContainer.add(new JSeparator());
                             funcArgsContainer.add(panel);
                         }
+                        funcArgsContainer.add(new JSeparator());
                         funcArgsContainer.add(addFuncArg);
                         stdinContainer.revalidate();
                         funcArgsContainer.revalidate();
@@ -120,7 +154,6 @@ public class ConcolicMenu extends ListingContextAction {
                         dialog.pack();
                     }
                 });
-
                 addStdin.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         JPanel newPanel = new JPanel();
@@ -162,10 +195,13 @@ public class ConcolicMenu extends ListingContextAction {
                     ArrayList<FunctionArgument> funcArgs = new ArrayList<>();
 
                     for(JPanel panel: functionArgs) {
-                        JTextField value = (JTextField) panel.getComponents()[3];
-                        JRadioButton symbolic = (JRadioButton) panel.getComponents()[4];
-                        JCheckBox pointer = (JCheckBox) panel.getComponents()[5];
-                        funcArgs.add(new FunctionArgument(value.getText(), symbolic.isSelected(), pointer.isSelected()));
+                        JRadioButton symbolic = (JRadioButton) panel.getComponents()[2];
+                        JCheckBox array = (JCheckBox) panel.getComponents()[3];
+                        ArrayList<String> values = new ArrayList<>();
+                        for(int i=5; i<panel.getComponents().length; i++) {
+                            values.add(((JTextField) panel.getComponents()[i]).getText());
+                        }
+                        funcArgs.add(new FunctionArgument(values, symbolic.isSelected(), array.isSelected()));
                     }
                     ConcolicAnalyzer.setArgs(funcArgs);
 
