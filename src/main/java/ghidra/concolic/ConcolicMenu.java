@@ -268,6 +268,20 @@ public class ConcolicMenu extends ListingContextAction {
         }, null, GroupName));
         tool.addAction(removeAvoidAddress);
 
+        ListingContextAction removeAllAvoidAddress = new ListingContextAction("Remove all addresses from list to avoid", getName()) {
+            @Override
+            protected void actionPerformed(ListingActionContext context) {
+                ConcolicAnalyzer.removeAllAvoidAddresses();
+            }
+        };
+
+        removeAllAvoidAddress.setPopupMenuData(new MenuData(new String[] {
+            MenuName,
+            "Remove",
+            "All Avoid Address"
+        }, null, GroupName));
+        tool.addAction(removeAllAvoidAddress);
+
         ListingContextAction solve = new ListingContextAction("Run angr to solve", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {

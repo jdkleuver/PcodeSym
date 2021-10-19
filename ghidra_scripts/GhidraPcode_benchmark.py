@@ -18,6 +18,7 @@ def run_script(server_host, server_port):
     import sys
     import pypcode
     import archinfo
+    import time
 
     print("Running inside the bridge!")
 
@@ -290,6 +291,7 @@ def run_script(server_host, server_port):
             return int(source_addr.toString(), 16)
 
         ############ Setup state ##########
+        start_time = time.time()
 
         # Get program name from ghidra
         filename = getCurrentProgram().getExecutablePath()
@@ -351,6 +353,8 @@ def run_script(server_host, server_port):
                 print("stdin: {}".format(solution_state.posix.dumps(0)))
         else:
             print("[>>>] no solution found :(") 
+
+        print("Script ran in {} seconds".format(time.time() - start_time))
 
 if __name__ == "__main__":
 

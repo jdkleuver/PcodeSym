@@ -88,6 +88,10 @@ public class ConcolicAnalyzer {
         }
         return false;
     }
+
+    public static void removeAllAvoidAddresses() {
+        avoidAddresses.clear();
+    }
     
     public static  void solve() {
         JOptionPane.showMessageDialog(null, "This button doesn't work currently, please manually run the '" + scriptName + "' from the script manager", "Not yet implemented", JOptionPane.INFORMATION_MESSAGE);
