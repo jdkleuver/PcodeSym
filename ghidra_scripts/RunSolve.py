@@ -297,9 +297,8 @@ def run_script(server_host, server_port):
         filename = getCurrentProgram().getExecutablePath()
         base_address = getCurrentProgram().getImageBase().getOffset()
         engine = ghidra.concolic.ConcolicAnalyzer.getEngine()
-        print(engine)
 
-        if engine == ghidra.concolic.ConcolicAnalyzer.Engine.PYPCODE or engine == ghidra.concolic.ConcolicAnalyzer.Engine.PCODESYM:
+        if engine.name() == "PYPCODE" or engine.name() == "PCODESYM":
             project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
         else:
             project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False})
@@ -342,7 +341,7 @@ def run_script(server_host, server_port):
 
         ######### Do symbolic execution ########
 
-        if engine == ghidra.concolic.ConcolicAnalyzer.Engine.PCODESYM:
+        if engine.name() == "PCODESYM":
             simulation.explore(find=is_successful, avoid=avoids, successor_func=successor_func)
         else:
             simulation.explore(find=is_successful, avoid=avoids)

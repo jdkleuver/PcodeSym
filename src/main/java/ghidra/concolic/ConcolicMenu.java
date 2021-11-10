@@ -316,5 +316,37 @@ public class ConcolicMenu extends ListingContextAction {
             "Set python 3 interpreter"
         }, null, GroupName));
         tool.addAction(setPython);
+
+    ListingContextAction setEngine = new ListingContextAction("Choose which symbolic execution engine to use with angr", getName()) {
+            @Override
+            protected void actionPerformed(ListingActionContext context) {
+                String[] engineOptions = {"PcodeSym", "PyPcode", "Vex (recommended for now)"};
+
+                String engineChoice = (String) JOptionPane.showInputDialog(
+                                null,
+                                "Which engine would you like to use?",
+                                "Select Symbolic Execution Engine",
+                                JOptionPane.QUESTION_MESSAGE,
+                                null,
+                                engineOptions,
+                                engineOptions[2]);
+
+                if(engineChoice.equals(engineOptions[0])) {
+                    ConcolicAnalyzer.setEngine(ConcolicAnalyzer.Engine.PCODESYM);
+                }
+                else if(engineChoice.equals(engineOptions[1])) {
+                    ConcolicAnalyzer.setEngine(ConcolicAnalyzer.Engine.PYPCODE);
+                }
+                else {
+                    ConcolicAnalyzer.setEngine(ConcolicAnalyzer.Engine.VEX);
+                }
+            }
+        };
+        setEngine.setMenuBarData(new MenuData(new String[] {
+            "Tools",
+            "PcodeSym",
+            "Set symbolic execution engine"
+        }, null, GroupName));
+        tool.addAction(setEngine);
     }
 }
