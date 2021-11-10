@@ -29,6 +29,7 @@ Replace `/path/to/ghidra` with the directory containing your ghidra installation
 8. Select the location to start the symbolic exectution in the code listing, right click select `PcodeSym->Set->Source Address`
 9. Select the location to stop the symbolic execution in the code listing, right click select `PcodeSym->Set->Sink Address`
 10. For any addresses that you wish to avoid during symbolic executions, right click them and select `PcodeSym->Add->Avoid Address` 
+11. Run the symbolic execution by starting the "RunSolve.py" script in the Ghidra script manager
 
 # How it works
 
