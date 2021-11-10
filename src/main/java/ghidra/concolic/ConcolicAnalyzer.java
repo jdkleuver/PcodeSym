@@ -26,6 +26,12 @@ import ghidra.program.model.address.Address;
  */
 public class ConcolicAnalyzer {
 
+    public enum Engine {
+        PYPCODE,
+        VEX,
+        PCODESYM
+    }
+
     public static List<Address> avoidAddresses = new ArrayList<>();
     public static Address sinkAddress = null;
     public static Address sourceAddress = null;
@@ -33,6 +39,7 @@ public class ConcolicAnalyzer {
     public static List<FunctionArgument> funcArgs = null;
     public static List<StdinPart> stdin = null;
     static final String scriptName = "RunSolve.py";
+    public static Engine symEngine = Engine.VEX; // Default to Vex engine since it performs best at the moment
 
 
     private ConcolicAnalyzer() {
@@ -46,6 +53,14 @@ public class ConcolicAnalyzer {
     public static void unSetSink() {
         sinkAddress = null;
         return;
+    }
+
+    public static void setEngine(Engine engine) {
+        symEngine = engine;
+    }
+
+    public static Engine getEngine() {
+        return symEngine;
     }
     
     public static void setSource(Address address) {

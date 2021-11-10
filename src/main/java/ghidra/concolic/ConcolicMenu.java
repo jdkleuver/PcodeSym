@@ -100,6 +100,10 @@ public class ConcolicMenu extends ListingContextAction {
                         ButtonGroup bg = new ButtonGroup();
                         bg.add(r1);
                         bg.add(r2);
+                        JPanel buttonPanel = new JPanel();
+                        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
+                        buttonPanel.add(r1);
+                        buttonPanel.add(r2);
                         JLabel argLabel = new JLabel("Argument " + (functionArgs.size()+1));
                         JTextField tf = new JTextField("Element");
                         JCheckBox array = new JCheckBox("Array");
@@ -123,8 +127,7 @@ public class ConcolicMenu extends ListingContextAction {
                                    addArrayElem.setVisible(false);
                                    newPanel.removeAll();
                                    newPanel.add(argLabel);
-                                   newPanel.add(r1);
-                                   newPanel.add(r2);
+                                   newPanel.add(buttonPanel);
                                    newPanel.add(array);
                                    newPanel.add(addArrayElem);
                                    newPanel.add(tf);
@@ -134,8 +137,7 @@ public class ConcolicMenu extends ListingContextAction {
                             }
                         });
                         newPanel.add(argLabel);
-                        newPanel.add(r1);
-                        newPanel.add(r2);
+                        newPanel.add(buttonPanel);
                         newPanel.add(array);
                         newPanel.add(addArrayElem);
                         newPanel.add(tf);
@@ -195,10 +197,11 @@ public class ConcolicMenu extends ListingContextAction {
                     ArrayList<FunctionArgument> funcArgs = new ArrayList<>();
 
                     for(JPanel panel: functionArgs) {
-                        JRadioButton symbolic = (JRadioButton) panel.getComponents()[2];
-                        JCheckBox array = (JCheckBox) panel.getComponents()[3];
+                        JPanel buttonPanel = (JPanel) panel.getComponents()[1];
+                        JRadioButton symbolic = (JRadioButton) buttonPanel.getComponents()[1];
+                        JCheckBox array = (JCheckBox) panel.getComponents()[2];
                         ArrayList<String> values = new ArrayList<>();
-                        for(int i=5; i<panel.getComponents().length; i++) {
+                        for(int i=4; i<panel.getComponents().length; i++) {
                             values.add(((JTextField) panel.getComponents()[i]).getText());
                         }
                         funcArgs.add(new FunctionArgument(values, symbolic.isSelected(), array.isSelected()));

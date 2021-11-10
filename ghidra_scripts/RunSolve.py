@@ -18,6 +18,7 @@ def run_script(server_host, server_port):
     import sys
     import pypcode
     import archinfo
+    import time
 
     print("Running inside the bridge!")
 
@@ -290,12 +291,18 @@ def run_script(server_host, server_port):
             return int(source_addr.toString(), 16)
 
         ############ Setup state ##########
+        start_time = time.time()
 
         # Get program name from ghidra
         filename = getCurrentProgram().getExecutablePath()
         base_address = getCurrentProgram().getImageBase().getOffset()
+        engine = ghidra.concolic.ConcolicAnalyzer.getEngine()
+        print(engine)
 
-        project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
+        if engine == ghidra.concolic.ConcolicAnalyzer.Engine.PYPCODE or engine == ghidra.concolic.ConcolicAnalyzer.Engine.PCODESYM:
+            project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False}, engine=angr.engines.UberEnginePcode)
+        else:
+            project = angr.Project(filename, load_options={'main_opts':{'base_addr': base_address},'auto_load_libs':False})
         
         sink = get_sink_address()
         avoids = get_avoid_addresses()
@@ -335,7 +342,10 @@ def run_script(server_host, server_port):
 
         ######### Do symbolic execution ########
 
-        simulation.explore(find=is_successful, avoid=avoids, successor_func=successor_func)
+        if engine == ghidra.concolic.ConcolicAnalyzer.Engine.PCODESYM:
+            simulation.explore(find=is_successful, avoid=avoids, successor_func=successor_func)
+        else:
+            simulation.explore(find=is_successful, avoid=avoids)
 
         ######## Post run analysis #########
 
@@ -351,6 +361,8 @@ def run_script(server_host, server_port):
                 print("stdin: {}".format(solution_state.posix.dumps(0)))
         else:
             print("[>>>] no solution found :(") 
+
+        print("Script ran in {} seconds".format(time.time() - start_time))
 
 if __name__ == "__main__":
 
