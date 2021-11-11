@@ -10,6 +10,8 @@ This Ghidra extension enables you to run symbolic execution on the binary you ar
 
 # Build steps
 
+For already built releases, please see the [Releases page](https://github.com/jdkleuver/PcodeSym/releases)
+
 The recommended way to build the extension is using the GhidraDev eclipse plugin, but you can also build from the command line:
 
 Install gradle using your package manager. I've successfully built with gradle version 6.8.3 and 7.2, other versions aren't tested.
